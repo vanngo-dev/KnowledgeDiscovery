@@ -1,9 +1,53 @@
 Project_Spec.md
 docs/youtube_tutorial_notes.md
 
+# Dependencies
 node_modules/
+
+# Build outputs
 dist/
+build/
+.vite/
+
+# Tauri / Rust build output
 src-tauri/target/
 
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+
+# Environment files
 .env
-.env.*
+.env.local
+.env.*.local
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor files
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+
+# Temporary files
+*.tmp
+*.temp
+
+# Local database / future vault data
+*.sqlite
+*.sqlite3
+*.db
+*.db-wal
+*.db-shm
+
+# Future local app/vault folders
+KnowledgeDiscoveryVault/
+knowledge-discovery-vault/
+
+# Tauri generated installers / bundles
+src-tauri/target/release/bundle/
