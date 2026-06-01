@@ -28,7 +28,7 @@ Verification:
 
 ## Phase 2 - Desktop Layout Shell
 
-Status: Implementation complete.
+Status: Implementation complete; native Rust verification still blocked by Windows Application Control.
 
 Scope:
 
@@ -53,3 +53,39 @@ Verification:
 - `npm run build` passes.
 - Vite dev server responds at `http://127.0.0.1:1420`.
 - Native Tauri build verification remains blocked by the Windows Application Control policy recorded in Phase 1.
+
+## Phase 3 - Local Vault Creation
+
+Status: Implementation complete.
+
+Scope:
+
+- Added manual parent-folder path entry after Windows Application Control blocked the Tauri dialog plugin build script.
+- Added the Rust `create_vault` command.
+- Created the required `KnowledgeDiscoveryVault` folder structure.
+- Created the required metadata files:
+  - `domains.md`
+  - `ontology.md`
+  - `scoring_rules.md`
+  - `classification_rules.md`
+- Displayed vault state in the desktop shell.
+
+Explicitly deferred:
+
+- SQLite database initialization.
+- Database migrations.
+- Source import.
+- Markdown/text chunking.
+- FTS search.
+- AI features.
+- Claim extraction.
+- Evidence linking.
+- Re-evaluation queue.
+- Graph visualization.
+
+Verification:
+
+- `pnpm run build` passes.
+- `cargo tree --manifest-path src-tauri\Cargo.toml -i tauri-plugin-dialog` confirms no `tauri-plugin-dialog` package remains.
+- Removed `tauri-plugin-dialog` from npm, pnpm, and Cargo dependencies so its blocked build script is no longer compiled.
+- `cargo check --manifest-path src-tauri\Cargo.toml` now gets past the removed dialog dependency, then Windows Application Control blocks a Cargo-generated `erased-serde` build script with OS error `4551`.

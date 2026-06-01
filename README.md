@@ -2,7 +2,7 @@
 
 KnowledgeDiscovery is a Windows-first local desktop app built with Tauri, React, TypeScript, Vite, and Tailwind CSS.
 
-Current phase: **Phase 2 - Desktop layout shell**
+Current phase: **Phase 3 - Local vault creation**
 
 ## Phase 1 Scope
 
@@ -14,8 +14,8 @@ Current phase: **Phase 2 - Desktop layout shell**
 ## Commands
 
 ```powershell
-npm install
-npm run tauri dev
+pnpm install
+pnpm tauri dev
 ```
 
 ## Phase 2 Scope
@@ -24,3 +24,11 @@ npm run tauri dev
 - Replace the landing screen with the first real desktop application shell.
 - Include a top command bar, left sidebar, center workspace, right evidence panel, and bottom status bar.
 - Do not implement SQLite, evidence persistence, note-taking, or Rust backend commands yet.
+
+## Phase 3 Scope
+
+- Add a native folder picker for choosing a vault parent location.
+- Add a Rust `create_vault` command.
+- Create the `KnowledgeDiscoveryVault` folder structure on disk.
+- Display vault path and creation state in the desktop shell.
+- Do not initialize SQLite, import sources, chunk files, search content, extract claims, link evidence, or run AI workflows yet.

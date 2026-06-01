@@ -24,3 +24,14 @@ The React app now renders the first desktop shell:
 - Bottom status bar.
 
 The shell is static. No Phase 3 data workflows, SQLite persistence, or Rust command handlers have been added.
+
+## Phase 3
+
+Phase 3 introduces the first Rust backend command.
+
+- Frontend folder selection is manual path entry to avoid native dialog build scripts blocked by Windows Application Control.
+- Rust command: `create_vault`.
+- Rust plugin: `tauri-plugin-opener`.
+- Capability: `opener:default` for the main window.
+
+The command creates `KnowledgeDiscoveryVault` inside the entered parent folder and ensures the required folder and metadata-file structure exists. The command is intentionally limited to filesystem folder/file creation. It does not create a SQLite database, import source files, index content, or perform evidence analysis.

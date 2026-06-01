@@ -1,35 +1,71 @@
+import { invoke } from "@tauri-apps/api/core";
+import { useState } from "react";
+
+type VaultCreationResult = {
+  vault_path: string;
+  created: boolean;
+  directories_created: number;
+  files_created: number;
+};
+
 const sidebarItems = [
-  { label: "Evidence", active: true },
+  { label: "Vault", active: true },
+  { label: "Evidence", active: false },
   { label: "Claims", active: false },
   { label: "Sources", active: false },
   { label: "Analysis", active: false },
 ];
 
-const workspaceCards = [
-  {
-    title: "Evidence Intake",
-    meta: "Source-grounded queue",
-    tone: "border-l-teal-600",
-  },
-  {
-    title: "Claim Review",
-    meta: "Reasoning workspace",
-    tone: "border-l-amber-600",
-  },
-  {
-    title: "Contradiction Watch",
-    meta: "Signals and gaps",
-    tone: "border-l-rose-600",
-  },
+const vaultStructure = [
+  "00_Inbox",
+  "01_Facts",
+  "02_Observations_Hypotheses",
+  "03_Analysis_Intelligence",
+  "04_Metadata",
 ];
 
-const evidenceRows = [
-  { label: "Source", value: "No item selected" },
-  { label: "Confidence", value: "Pending" },
-  { label: "Links", value: "0" },
+const metadataFiles = [
+  "domains.md",
+  "ontology.md",
+  "scoring_rules.md",
+  "classification_rules.md",
 ];
 
 function App() {
+  const [basePath, setBasePath] = useState("");
+  const [vaultState, setVaultState] = useState<VaultCreationResult | null>(
+    null,
+  );
+  const [statusMessage, setStatusMessage] = useState(
+    "Choose a location to create the local vault.",
+  );
+  const [errorMessage, setErrorMessage] = useState("");
+  const [isCreating, setIsCreating] = useState(false);
+
+  async function createVault() {
+    setErrorMessage("");
+    setIsCreating(true);
+
+    try {
+      const result = await invoke<VaultCreationResult>("create_vault", {
+        basePath,
+      });
+
+      setVaultState(result);
+      setStatusMessage(
+        result.created
+          ? "Vault created successfully."
+          : "Vault already existed; missing folders and files were checked.",
+      );
+    } catch (error) {
+      setErrorMessage(getErrorMessage(error));
+    } finally {
+      setIsCreating(false);
+    }
+  }
+
+  const canCreate = basePath.trim().length > 0 && !isCreating;
+
   return (
     <div className="flex h-screen min-h-[620px] flex-col overflow-hidden bg-[#eef1ed] text-[#1f2624]">
       <header className="flex h-14 shrink-0 items-center gap-4 border-b border-[#cbd3cd] bg-[#fbfcf9] px-4">
@@ -42,21 +78,21 @@ function App() {
               KnowledgeDiscovery
             </h1>
             <p className="truncate text-xs text-[#68746d]">
-              Local evidence workspace
+              Local vault workspace
             </p>
           </div>
         </div>
 
         <div className="mx-auto hidden w-full max-w-xl items-center rounded border border-[#cbd3cd] bg-[#f5f7f3] px-3 py-1.5 text-sm text-[#68746d] md:flex">
-          Command search
+          {vaultState?.vault_path ?? "No vault created"}
           <span className="ml-auto rounded border border-[#cbd3cd] bg-white px-1.5 py-0.5 text-[11px] text-[#7b867f]">
-            Phase 2
+            Phase 3
           </span>
         </div>
 
         <div className="ml-auto flex shrink-0 items-center gap-2">
-          <span className="rounded border border-[#d8c8a6] bg-[#fff7e5] px-2.5 py-1 text-xs font-medium text-[#74531a]">
-            Prototype
+          <span className="rounded border border-[#c5ddcb] bg-[#eefbf1] px-2.5 py-1 text-xs font-medium text-[#27633a]">
+            Vault setup
           </span>
           <span className="rounded border border-[#cbd3cd] bg-white px-2.5 py-1 text-xs text-[#5f6b65]">
             Windows
@@ -70,8 +106,8 @@ function App() {
             <p className="text-[11px] font-semibold uppercase tracking-wide text-[#748079]">
               Workspace
             </p>
-            <p className="mt-1 text-sm font-medium text-[#26312e]">
-              KnowledgeDiscoveryVault
+            <p className="mt-1 truncate text-sm font-medium text-[#26312e]">
+              {vaultState ? "KnowledgeDiscoveryVault" : "No vault"}
             </p>
           </div>
 
@@ -95,7 +131,7 @@ function App() {
               Phase
             </p>
             <p className="mt-2 text-sm font-medium text-[#26312e]">
-              Desktop shell
+              Vault creation
             </p>
           </div>
         </aside>
@@ -107,45 +143,101 @@ function App() {
                 Center Workspace
               </p>
               <h2 className="mt-1 text-2xl font-semibold text-[#1c2723]">
-                Evidence Engine Shell
+                Create Local Vault
               </h2>
             </div>
             <div className="rounded border border-[#cbd3cd] bg-white px-3 py-2 text-right">
               <p className="text-xs text-[#68746d]">State</p>
-              <p className="text-sm font-semibold text-[#1f4d46]">Ready</p>
+              <p className="text-sm font-semibold text-[#1f4d46]">
+                {vaultState ? "Vault ready" : "Setup"}
+              </p>
             </div>
           </section>
 
-          <section className="grid gap-4 lg:grid-cols-3">
-            {workspaceCards.map((card) => (
-              <article
-                key={card.title}
-                className={`min-h-32 rounded border border-[#cbd3cd] border-l-4 ${card.tone} bg-white p-4 shadow-sm`}
-              >
-                <p className="text-sm font-semibold text-[#26312e]">
-                  {card.title}
-                </p>
-                <p className="mt-2 text-sm text-[#68746d]">{card.meta}</p>
-              </article>
-            ))}
-          </section>
-
-          <section className="mt-5 rounded border border-[#cbd3cd] bg-white">
+          <section className="rounded border border-[#cbd3cd] bg-white">
             <div className="border-b border-[#d5ddd7] px-4 py-3">
               <h3 className="text-sm font-semibold text-[#26312e]">
-                Working Surface
+                Vault Location
               </h3>
             </div>
-            <div className="grid min-h-72 place-items-center p-8 text-center">
+            <div className="space-y-4 p-4">
               <div>
-                <p className="text-lg font-semibold text-[#26312e]">
-                  No workspace item selected
-                </p>
-                <p className="mt-2 max-w-md text-sm leading-6 text-[#68746d]">
-                  Source context, claims, and analysis will share this surface.
-                </p>
+                <label
+                  className="text-xs font-semibold uppercase tracking-wide text-[#748079]"
+                  htmlFor="base-path"
+                >
+                  Parent folder
+                </label>
+                <div className="mt-2 flex gap-2">
+                  <input
+                    id="base-path"
+                    className="min-w-0 flex-1 rounded border border-[#cbd3cd] bg-[#fbfcf9] px-3 py-2 text-sm text-[#26312e] outline-none focus:border-[#1f4d46]"
+                    onChange={(event) => {
+                      setBasePath(event.target.value);
+                      setStatusMessage("Location entered.");
+                    }}
+                    placeholder="Paste a parent folder path"
+                    value={basePath}
+                  />
+                  <button
+                    className="shrink-0 rounded bg-[#1f4d46] px-3 py-2 text-sm font-semibold text-white hover:bg-[#183d38] disabled:cursor-not-allowed disabled:bg-[#94aaa3]"
+                    disabled={!canCreate}
+                    onClick={createVault}
+                    type="button"
+                  >
+                    {isCreating ? "Creating" : "Create vault"}
+                  </button>
+                </div>
               </div>
+
+              {errorMessage ? (
+                <p className="rounded border border-[#efc5c5] bg-[#fff4f4] px-3 py-2 text-sm text-[#8c2e2e]">
+                  {errorMessage}
+                </p>
+              ) : null}
+
+              <p className="rounded border border-[#d5ddd7] bg-[#f6f8f4] px-3 py-2 text-sm text-[#4d5a54]">
+                {statusMessage}
+              </p>
             </div>
+          </section>
+
+          <section className="mt-5 grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
+            <article className="rounded border border-[#cbd3cd] bg-white">
+              <div className="border-b border-[#d5ddd7] px-4 py-3">
+                <h3 className="text-sm font-semibold text-[#26312e]">
+                  Folder Structure
+                </h3>
+              </div>
+              <div className="grid gap-2 p-4 sm:grid-cols-2">
+                {vaultStructure.map((folder) => (
+                  <div
+                    className="rounded border border-[#d5ddd7] bg-[#fbfcf9] px-3 py-2 text-sm font-medium text-[#26312e]"
+                    key={folder}
+                  >
+                    {folder}
+                  </div>
+                ))}
+              </div>
+            </article>
+
+            <article className="rounded border border-[#cbd3cd] bg-white">
+              <div className="border-b border-[#d5ddd7] px-4 py-3">
+                <h3 className="text-sm font-semibold text-[#26312e]">
+                  Metadata Files
+                </h3>
+              </div>
+              <div className="space-y-2 p-4">
+                {metadataFiles.map((file) => (
+                  <div
+                    className="rounded border border-[#d5ddd7] bg-[#fbfcf9] px-3 py-2 text-sm text-[#4d5a54]"
+                    key={file}
+                  >
+                    {file}
+                  </div>
+                ))}
+              </div>
+            </article>
           </section>
         </main>
 
@@ -155,35 +247,70 @@ function App() {
               Right Evidence Panel
             </p>
             <h2 className="mt-1 text-lg font-semibold text-[#26312e]">
-              Evidence Detail
+              Vault State
             </h2>
           </div>
 
           <div className="space-y-3 p-4">
-            {evidenceRows.map((row) => (
-              <div
-                key={row.label}
-                className="rounded border border-[#d5ddd7] bg-white p-3"
-              >
-                <p className="text-xs font-semibold uppercase tracking-wide text-[#748079]">
-                  {row.label}
-                </p>
-                <p className="mt-1 text-sm font-medium text-[#26312e]">
-                  {row.value}
-                </p>
-              </div>
-            ))}
+            <StateRow label="Vault" value="KnowledgeDiscoveryVault" />
+            <StateRow
+              label="Path"
+              value={vaultState?.vault_path ?? "Not created"}
+            />
+            <StateRow
+              label="Created"
+              value={
+                vaultState
+                  ? vaultState.created
+                    ? "New vault"
+                    : "Existing vault"
+                  : "Pending"
+              }
+            />
+            <StateRow
+              label="Folders added"
+              value={vaultState ? String(vaultState.directories_created) : "0"}
+            />
+            <StateRow
+              label="Files added"
+              value={vaultState ? String(vaultState.files_created) : "0"}
+            />
           </div>
         </aside>
       </div>
 
       <footer className="flex h-8 shrink-0 items-center justify-between border-t border-[#c2cbc4] bg-[#26312e] px-4 text-xs text-[#dce4dd]">
-        <span>Phase 2</span>
-        <span>Tauri + React + TypeScript + Vite + Tailwind CSS</span>
+        <span>Phase 3</span>
+        <span>Tauri + React + TypeScript + Vite + Tailwind CSS + Rust vault command</span>
         <span>com.knowledgediscovery.app</span>
       </footer>
     </div>
   );
+}
+
+function StateRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded border border-[#d5ddd7] bg-white p-3">
+      <p className="text-xs font-semibold uppercase tracking-wide text-[#748079]">
+        {label}
+      </p>
+      <p className="mt-1 break-words text-sm font-medium text-[#26312e]">
+        {value}
+      </p>
+    </div>
+  );
+}
+
+function getErrorMessage(error: unknown) {
+  if (typeof error === "string") {
+    return error;
+  }
+
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return "Something went wrong while creating the vault.";
 }
 
 export default App;
