@@ -1,7 +1,5 @@
 # Data Model
 
-No application data model is implemented in Phase 1.
-
 Reserved future names:
 
 - Vault: `KnowledgeDiscoveryVault`
@@ -9,7 +7,7 @@ Reserved future names:
 
 ## Phase 3 Vault Structure
 
-Phase 3 creates the local vault folder structure only. No database schema exists yet.
+Phase 3 creates the local vault folder structure only.
 
 ```text
 KnowledgeDiscoveryVault/
@@ -38,3 +36,36 @@ KnowledgeDiscoveryVault/
     ├── scoring_rules.md
     └── classification_rules.md
 ```
+
+## Phase 4 App Database
+
+Phase 4 creates the internal SQLite app database:
+
+```text
+KnowledgeDiscoveryVault/
+└── knowledgediscovery.sqlite
+```
+
+Schema version `1` contains only app-level bookkeeping:
+
+```sql
+CREATE TABLE IF NOT EXISTS schema_migrations (
+    version INTEGER PRIMARY KEY,
+    name TEXT NOT NULL,
+    applied_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS app_metadata (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+Initial metadata keys:
+
+- `app_name`
+- `vault_name`
+- `schema_version`
+
+Evidence storage, source ingestion, chunking, FTS search, claims, evidence links, AI workflows, and graph data remain deferred.

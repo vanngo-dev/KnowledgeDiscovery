@@ -2,7 +2,7 @@
 
 KnowledgeDiscovery is a Windows-first local desktop app built with Tauri, React, TypeScript, Vite, and Tailwind CSS.
 
-Current phase: **Phase 3 - Local vault creation**
+Current phase: **Phase 4 - SQLite app DB initialization**
 
 ## Phase 1 Scope
 
@@ -27,8 +27,15 @@ pnpm tauri dev
 
 ## Phase 3 Scope
 
-- Add a native folder picker for choosing a vault parent location.
+- Add manual parent-folder path entry for choosing a vault parent location.
 - Add a Rust `create_vault` command.
 - Create the `KnowledgeDiscoveryVault` folder structure on disk.
 - Display vault path and creation state in the desktop shell.
 - Do not initialize SQLite, import sources, chunk files, search content, extract claims, link evidence, or run AI workflows yet.
+
+## Phase 4 Scope
+
+- Initialize the internal SQLite app database at `KnowledgeDiscoveryVault/knowledgediscovery.sqlite`.
+- Add Phase 4 schema bookkeeping tables only.
+- Display the app DB path and creation state in the desktop shell.
+- Do not import sources, chunk files, search content, extract claims, link evidence, or run AI workflows yet.

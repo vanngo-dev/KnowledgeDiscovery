@@ -35,3 +35,14 @@ Phase 3 introduces the first Rust backend command.
 - Capability: `opener:default` for the main window.
 
 The command creates `KnowledgeDiscoveryVault` inside the entered parent folder and ensures the required folder and metadata-file structure exists. The command is intentionally limited to filesystem folder/file creation. It does not create a SQLite database, import source files, index content, or perform evidence analysis.
+
+## Phase 4
+
+Phase 4 initializes the internal SQLite app database inside the local vault.
+
+- SQLite path: `KnowledgeDiscoveryVault/knowledgediscovery.sqlite`.
+- Rust dependency: `rusqlite` with bundled SQLite for Windows portability.
+- Rust command: `create_vault` now also initializes the app DB.
+- Schema version: `1`.
+
+The Phase 4 schema is intentionally limited to app metadata and migration bookkeeping. It does not import source files, chunk content, create FTS search, extract claims, link evidence, run AI workflows, or create graph data.

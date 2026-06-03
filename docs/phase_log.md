@@ -28,7 +28,7 @@ Verification:
 
 ## Phase 2 - Desktop Layout Shell
 
-Status: Implementation complete; native Rust verification still blocked by Windows Application Control.
+Status: Implementation complete.
 
 Scope:
 
@@ -89,3 +89,36 @@ Verification:
 - `cargo tree --manifest-path src-tauri\Cargo.toml -i tauri-plugin-dialog` confirms no `tauri-plugin-dialog` package remains.
 - Removed `tauri-plugin-dialog` from npm, pnpm, and Cargo dependencies so its blocked build script is no longer compiled.
 - `cargo check --manifest-path src-tauri\Cargo.toml` now gets past the removed dialog dependency, then Windows Application Control blocks a Cargo-generated `erased-serde` build script with OS error `4551`.
+
+## Phase 4 - SQLite App DB Initialization
+
+Status: Implementation complete; native Rust verification still blocked by Windows Application Control.
+
+Scope:
+
+- Added `rusqlite` with bundled SQLite for Windows-portable database initialization.
+- Initialized the internal app DB at `KnowledgeDiscoveryVault/knowledgediscovery.sqlite`.
+- Added schema version `1` bookkeeping tables:
+  - `schema_migrations`
+  - `app_metadata`
+- Seeded app metadata for app name, vault name, and schema version.
+- Displayed the app DB path and creation state in the desktop shell.
+
+Explicitly deferred:
+
+- Source import.
+- Markdown/text chunking.
+- FTS search.
+- AI features.
+- Claim extraction.
+- Evidence linking.
+- Re-evaluation queue.
+- Graph visualization.
+
+Verification:
+
+- `cargo update --manifest-path src-tauri\Cargo.toml` refreshed `Cargo.lock` with `rusqlite`.
+- `pnpm run build` passes.
+- `cargo check --manifest-path src-tauri\Cargo.toml` passes.
+- `cargo test --manifest-path src-tauri\Cargo.toml` passes.
+- `pnpm tauri build --debug` passes and builds `src-tauri\target\debug\knowledge-discovery.exe`.

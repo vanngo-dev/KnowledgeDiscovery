@@ -3,10 +3,14 @@ import { useState } from "react";
 
 type VaultCreationResult = {
   vault_path: string;
+  database_path: string;
   created: boolean;
+  database_created: boolean;
   directories_created: number;
   files_created: number;
 };
+
+type DatabaseHealthStatus = "Not checked" | "Checking" | "Healthy" | "Failed";
 
 const sidebarItems = [
   { label: "Vault", active: true },
@@ -31,6 +35,8 @@ const metadataFiles = [
   "classification_rules.md",
 ];
 
+const appDatabase = "knowledgediscovery.sqlite";
+
 function App() {
   const [basePath, setBasePath] = useState("");
   const [vaultState, setVaultState] = useState<VaultCreationResult | null>(
@@ -41,10 +47,15 @@ function App() {
   );
   const [errorMessage, setErrorMessage] = useState("");
   const [isCreating, setIsCreating] = useState(false);
+  const [databaseHealthStatus, setDatabaseHealthStatus] =
+    useState<DatabaseHealthStatus>("Not checked");
+  const [databaseHealthMessage, setDatabaseHealthMessage] = useState("");
 
   async function createVault() {
     setErrorMessage("");
     setIsCreating(true);
+    setDatabaseHealthStatus("Not checked");
+    setDatabaseHealthMessage("");
 
     try {
       const result = await invoke<VaultCreationResult>("create_vault", {
@@ -54,8 +65,8 @@ function App() {
       setVaultState(result);
       setStatusMessage(
         result.created
-          ? "Vault created successfully."
-          : "Vault already existed; missing folders and files were checked.",
+          ? "Vault and app database created successfully."
+          : "Vault already existed; folders, files, and app database were checked.",
       );
     } catch (error) {
       setErrorMessage(getErrorMessage(error));
@@ -64,7 +75,28 @@ function App() {
     }
   }
 
+  async function checkHealth() {
+    if (!vaultState) {
+      return;
+    }
+
+    setErrorMessage("");
+    setDatabaseHealthStatus("Checking");
+    setDatabaseHealthMessage("");
+
+    try {
+      const result = await checkDatabaseHealth(vaultState.vault_path);
+      setDatabaseHealthStatus(isHealthResultHealthy(result) ? "Healthy" : "Failed");
+      setDatabaseHealthMessage(getHealthMessage(result));
+    } catch (error) {
+      setDatabaseHealthStatus("Failed");
+      setDatabaseHealthMessage(getErrorMessage(error));
+    }
+  }
+
   const canCreate = basePath.trim().length > 0 && !isCreating;
+  const canCheckDatabaseHealth =
+    vaultState !== null && databaseHealthStatus !== "Checking";
 
   return (
     <div className="flex h-screen min-h-[620px] flex-col overflow-hidden bg-[#eef1ed] text-[#1f2624]">
@@ -86,7 +118,7 @@ function App() {
         <div className="mx-auto hidden w-full max-w-xl items-center rounded border border-[#cbd3cd] bg-[#f5f7f3] px-3 py-1.5 text-sm text-[#68746d] md:flex">
           {vaultState?.vault_path ?? "No vault created"}
           <span className="ml-auto rounded border border-[#cbd3cd] bg-white px-1.5 py-0.5 text-[11px] text-[#7b867f]">
-            Phase 3
+            Phase 4
           </span>
         </div>
 
@@ -131,7 +163,7 @@ function App() {
               Phase
             </p>
             <p className="mt-2 text-sm font-medium text-[#26312e]">
-              Vault creation
+              App DB init
             </p>
           </div>
         </aside>
@@ -238,6 +270,45 @@ function App() {
                 ))}
               </div>
             </article>
+
+            <article className="rounded border border-[#cbd3cd] bg-white">
+              <div className="border-b border-[#d5ddd7] px-4 py-3">
+                <h3 className="text-sm font-semibold text-[#26312e]">
+                  App Database
+                </h3>
+              </div>
+              <div className="space-y-2 p-4">
+                <div className="rounded border border-[#d5ddd7] bg-[#fbfcf9] px-3 py-2 text-sm font-medium text-[#26312e]">
+                  {appDatabase}
+                </div>
+                <div className="rounded border border-[#d5ddd7] bg-[#fbfcf9] px-3 py-2 text-sm text-[#4d5a54]">
+                  Schema version 1
+                </div>
+                {vaultState ? (
+                  <button
+                    className="w-full rounded bg-[#1f4d46] px-3 py-2 text-sm font-semibold text-white hover:bg-[#183d38] disabled:cursor-not-allowed disabled:bg-[#94aaa3]"
+                    disabled={!canCheckDatabaseHealth}
+                    onClick={checkHealth}
+                    type="button"
+                  >
+                    {databaseHealthStatus === "Checking"
+                      ? "Checking DB Health"
+                      : "Check DB Health"}
+                  </button>
+                ) : null}
+                {databaseHealthMessage ? (
+                  <p
+                    className={`rounded border px-3 py-2 text-sm ${
+                      databaseHealthStatus === "Failed"
+                        ? "border-[#efc5c5] bg-[#fff4f4] text-[#8c2e2e]"
+                        : "border-[#c5ddcb] bg-[#eefbf1] text-[#27633a]"
+                    }`}
+                  >
+                    {databaseHealthMessage}
+                  </p>
+                ) : null}
+              </div>
+            </article>
           </section>
         </main>
 
@@ -257,6 +328,21 @@ function App() {
               label="Path"
               value={vaultState?.vault_path ?? "Not created"}
             />
+            <StateRow
+              label="App DB"
+              value={vaultState?.database_path ?? "Not initialized"}
+            />
+            <StateRow
+              label="DB created"
+              value={
+                vaultState
+                  ? vaultState.database_created
+                    ? "New database"
+                    : "Existing database"
+                  : "Pending"
+              }
+            />
+            <StateRow label="DB health" value={databaseHealthStatus} />
             <StateRow
               label="Created"
               value={
@@ -280,12 +366,16 @@ function App() {
       </div>
 
       <footer className="flex h-8 shrink-0 items-center justify-between border-t border-[#c2cbc4] bg-[#26312e] px-4 text-xs text-[#dce4dd]">
-        <span>Phase 3</span>
-        <span>Tauri + React + TypeScript + Vite + Tailwind CSS + Rust vault command</span>
+        <span>Phase 4</span>
+        <span>Tauri + React + TypeScript + Vite + Tailwind CSS + Rust vault command + SQLite app DB</span>
         <span>com.knowledgediscovery.app</span>
       </footer>
     </div>
   );
+}
+
+async function checkDatabaseHealth(vaultPath: string) {
+  return invoke<unknown>("check_database_health", { vaultPath });
 }
 
 function StateRow({ label, value }: { label: string; value: string }) {
@@ -311,6 +401,47 @@ function getErrorMessage(error: unknown) {
   }
 
   return "Something went wrong while creating the vault.";
+}
+
+function getHealthMessage(result: unknown) {
+  if (typeof result === "string") {
+    return result;
+  }
+
+  if (typeof result === "boolean") {
+    return result ? "Database health check passed." : "Database health check failed.";
+  }
+
+  if (result && typeof result === "object") {
+    const message = "message" in result ? result.message : undefined;
+
+    if (typeof message === "string") {
+      return message;
+    }
+  }
+
+  return "Database health check passed.";
+}
+
+function isHealthResultHealthy(result: unknown) {
+  if (typeof result === "boolean") {
+    return result;
+  }
+
+  if (result && typeof result === "object") {
+    const healthy = "healthy" in result ? result.healthy : undefined;
+    const ok = "ok" in result ? result.ok : undefined;
+
+    if (typeof healthy === "boolean") {
+      return healthy;
+    }
+
+    if (typeof ok === "boolean") {
+      return ok;
+    }
+  }
+
+  return true;
 }
 
 export default App;
