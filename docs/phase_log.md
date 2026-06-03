@@ -92,7 +92,7 @@ Verification:
 
 ## Phase 4 - SQLite App DB Initialization
 
-Status: Implementation complete; native Rust verification still blocked by Windows Application Control.
+Status: Implementation complete.
 
 Scope:
 
@@ -120,5 +120,36 @@ Verification:
 - `cargo update --manifest-path src-tauri\Cargo.toml` refreshed `Cargo.lock` with `rusqlite`.
 - `pnpm run build` passes.
 - `cargo check --manifest-path src-tauri\Cargo.toml` passes.
+- `cargo test --manifest-path src-tauri\Cargo.toml` passes.
+- `pnpm tauri build --debug` passes and builds `src-tauri\target\debug\knowledge-discovery.exe`.
+
+## Phase 5 - Vault Explorer and File Tree
+
+Status: Implementation complete.
+
+Scope:
+
+- Added the read-only Rust `list_vault_tree` command.
+- Displayed the local `KnowledgeDiscoveryVault` folder/file tree in the desktop UI.
+- Added a `Refresh Tree` control for re-reading the folder structure.
+- Added selected tree item state in the right panel.
+- Sorted folders before files, with names sorted alphabetically inside each group.
+
+Explicitly deferred:
+
+- File content reads.
+- File import into SQLite.
+- Source records.
+- Markdown/text chunking.
+- FTS search.
+- AI features.
+- Claim extraction.
+- Evidence linking.
+- Re-evaluation queue.
+- Graph visualization.
+
+Verification:
+
+- `pnpm run build` passes.
 - `cargo test --manifest-path src-tauri\Cargo.toml` passes.
 - `pnpm tauri build --debug` passes and builds `src-tauri\target\debug\knowledge-discovery.exe`.

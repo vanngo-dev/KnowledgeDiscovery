@@ -46,3 +46,13 @@ Phase 4 initializes the internal SQLite app database inside the local vault.
 - Schema version: `1`.
 
 The Phase 4 schema is intentionally limited to app metadata and migration bookkeeping. It does not import source files, chunk content, create FTS search, extract claims, link evidence, run AI workflows, or create graph data.
+
+## Phase 5
+
+Phase 5 adds a read-only vault explorer and file tree.
+
+- Rust command: `list_vault_tree`.
+- Frontend view: `Vault File Tree`.
+- Returned data: entry name, absolute path, relative path, entry type, and child entries.
+
+The command reads directory entries and filesystem metadata only. It does not read file contents, import files into SQLite, create source records, chunk content, search content, extract claims, link evidence, run AI workflows, or create graph data.

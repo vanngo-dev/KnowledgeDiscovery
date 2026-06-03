@@ -11,6 +11,15 @@ type VaultCreationResult = {
 };
 
 type DatabaseHealthStatus = "Not checked" | "Checking" | "Healthy" | "Failed";
+type VaultTreeStatus = "Not loaded" | "Loading" | "Loaded" | "Failed";
+
+type VaultTreeEntry = {
+  name: string;
+  path: string;
+  relative_path: string;
+  entry_type: "directory" | "file";
+  children: VaultTreeEntry[];
+};
 
 const sidebarItems = [
   { label: "Vault", active: true },
@@ -50,12 +59,21 @@ function App() {
   const [databaseHealthStatus, setDatabaseHealthStatus] =
     useState<DatabaseHealthStatus>("Not checked");
   const [databaseHealthMessage, setDatabaseHealthMessage] = useState("");
+  const [vaultTree, setVaultTree] = useState<VaultTreeEntry | null>(null);
+  const [vaultTreeStatus, setVaultTreeStatus] =
+    useState<VaultTreeStatus>("Not loaded");
+  const [vaultTreeMessage, setVaultTreeMessage] = useState("");
+  const [selectedTreePath, setSelectedTreePath] = useState("");
 
   async function createVault() {
     setErrorMessage("");
     setIsCreating(true);
     setDatabaseHealthStatus("Not checked");
     setDatabaseHealthMessage("");
+    setVaultTree(null);
+    setVaultTreeStatus("Not loaded");
+    setVaultTreeMessage("");
+    setSelectedTreePath("");
 
     try {
       const result = await invoke<VaultCreationResult>("create_vault", {
@@ -68,6 +86,7 @@ function App() {
           ? "Vault and app database created successfully."
           : "Vault already existed; folders, files, and app database were checked.",
       );
+      await loadVaultTree(result.vault_path);
     } catch (error) {
       setErrorMessage(getErrorMessage(error));
     } finally {
@@ -94,9 +113,32 @@ function App() {
     }
   }
 
+  async function loadVaultTree(vaultPath = vaultState?.vault_path) {
+    if (!vaultPath) {
+      return;
+    }
+
+    setVaultTreeStatus("Loading");
+    setVaultTreeMessage("");
+
+    try {
+      const tree = await listVaultTree(vaultPath);
+
+      setVaultTree(tree);
+      setVaultTreeStatus("Loaded");
+      setVaultTreeMessage("Vault tree loaded.");
+    } catch (error) {
+      setVaultTree(null);
+      setVaultTreeStatus("Failed");
+      setVaultTreeMessage(getErrorMessage(error));
+    }
+  }
+
   const canCreate = basePath.trim().length > 0 && !isCreating;
   const canCheckDatabaseHealth =
     vaultState !== null && databaseHealthStatus !== "Checking";
+  const canRefreshVaultTree =
+    vaultState !== null && vaultTreeStatus !== "Loading";
 
   return (
     <div className="flex h-screen min-h-[620px] flex-col overflow-hidden bg-[#eef1ed] text-[#1f2624]">
@@ -118,7 +160,7 @@ function App() {
         <div className="mx-auto hidden w-full max-w-xl items-center rounded border border-[#cbd3cd] bg-[#f5f7f3] px-3 py-1.5 text-sm text-[#68746d] md:flex">
           {vaultState?.vault_path ?? "No vault created"}
           <span className="ml-auto rounded border border-[#cbd3cd] bg-white px-1.5 py-0.5 text-[11px] text-[#7b867f]">
-            Phase 4
+            Phase 5
           </span>
         </div>
 
@@ -163,7 +205,7 @@ function App() {
               Phase
             </p>
             <p className="mt-2 text-sm font-medium text-[#26312e]">
-              App DB init
+              Vault explorer
             </p>
           </div>
         </aside>
@@ -175,13 +217,13 @@ function App() {
                 Center Workspace
               </p>
               <h2 className="mt-1 text-2xl font-semibold text-[#1c2723]">
-                Create Local Vault
+                Vault Explorer
               </h2>
             </div>
             <div className="rounded border border-[#cbd3cd] bg-white px-3 py-2 text-right">
               <p className="text-xs text-[#68746d]">State</p>
               <p className="text-sm font-semibold text-[#1f4d46]">
-                {vaultState ? "Vault ready" : "Setup"}
+                {vaultTree ? "Tree loaded" : vaultState ? "Vault ready" : "Setup"}
               </p>
             </div>
           </section>
@@ -231,6 +273,48 @@ function App() {
               <p className="rounded border border-[#d5ddd7] bg-[#f6f8f4] px-3 py-2 text-sm text-[#4d5a54]">
                 {statusMessage}
               </p>
+            </div>
+          </section>
+
+          <section className="mt-5 rounded border border-[#cbd3cd] bg-white">
+            <div className="flex items-center justify-between gap-3 border-b border-[#d5ddd7] px-4 py-3">
+              <h3 className="text-sm font-semibold text-[#26312e]">
+                Vault File Tree
+              </h3>
+              {vaultState ? (
+                <button
+                  className="shrink-0 rounded border border-[#b9c5bd] bg-white px-3 py-2 text-sm font-medium text-[#26312e] hover:bg-[#f1f4f0] disabled:cursor-not-allowed disabled:text-[#94aaa3]"
+                  disabled={!canRefreshVaultTree}
+                  onClick={() => loadVaultTree()}
+                  type="button"
+                >
+                  {vaultTreeStatus === "Loading" ? "Loading Tree" : "Refresh Tree"}
+                </button>
+              ) : null}
+            </div>
+            <div className="min-h-64 p-4">
+              {vaultTree ? (
+                <div className="rounded border border-[#d5ddd7] bg-[#fbfcf9] p-2">
+                  <VaultTree
+                    entry={vaultTree}
+                    onSelect={setSelectedTreePath}
+                    selectedPath={selectedTreePath}
+                  />
+                </div>
+              ) : (
+                <div className="grid min-h-52 place-items-center rounded border border-dashed border-[#c2cbc4] bg-[#f6f8f4] px-4 text-center">
+                  <p className="text-sm font-medium text-[#4d5a54]">
+                    {vaultTreeStatus === "Loading"
+                      ? "Loading vault tree."
+                      : vaultTreeMessage || "Create a vault to load the file tree."}
+                  </p>
+                </div>
+              )}
+              {vaultTree && vaultTreeMessage ? (
+                <p className="mt-3 rounded border border-[#d5ddd7] bg-[#f6f8f4] px-3 py-2 text-sm text-[#4d5a54]">
+                  {vaultTreeMessage}
+                </p>
+              ) : null}
             </div>
           </section>
 
@@ -343,6 +427,11 @@ function App() {
               }
             />
             <StateRow label="DB health" value={databaseHealthStatus} />
+            <StateRow label="Tree" value={vaultTreeStatus} />
+            <StateRow
+              label="Selected"
+              value={selectedTreePath || "No tree item selected"}
+            />
             <StateRow
               label="Created"
               value={
@@ -366,8 +455,8 @@ function App() {
       </div>
 
       <footer className="flex h-8 shrink-0 items-center justify-between border-t border-[#c2cbc4] bg-[#26312e] px-4 text-xs text-[#dce4dd]">
-        <span>Phase 4</span>
-        <span>Tauri + React + TypeScript + Vite + Tailwind CSS + Rust vault command + SQLite app DB</span>
+        <span>Phase 5</span>
+        <span>Tauri + React + TypeScript + Vite + Tailwind CSS + Rust vault command + SQLite app DB + vault file tree</span>
         <span>com.knowledgediscovery.app</span>
       </footer>
     </div>
@@ -376,6 +465,64 @@ function App() {
 
 async function checkDatabaseHealth(vaultPath: string) {
   return invoke<unknown>("check_database_health", { vaultPath });
+}
+
+async function listVaultTree(vaultPath: string) {
+  return invoke<VaultTreeEntry>("list_vault_tree", { vaultPath });
+}
+
+function VaultTree({
+  entry,
+  onSelect,
+  selectedPath,
+  depth = 0,
+}: {
+  entry: VaultTreeEntry;
+  onSelect: (path: string) => void;
+  selectedPath: string;
+  depth?: number;
+}) {
+  const isSelected = selectedPath === entry.path;
+
+  return (
+    <div>
+      <button
+        className={`flex h-8 w-full min-w-0 items-center gap-2 rounded px-2 text-left text-sm ${
+          isSelected
+            ? "bg-[#1f4d46] text-white"
+            : "text-[#26312e] hover:bg-[#e7ece7]"
+        }`}
+        onClick={() => onSelect(entry.path)}
+        style={{ paddingLeft: `${8 + depth * 18}px` }}
+        title={entry.path}
+        type="button"
+      >
+        <span
+          className={`shrink-0 rounded border px-1.5 py-0.5 text-[10px] font-semibold ${
+            isSelected
+              ? "border-[#dce4dd] text-white"
+              : "border-[#cbd3cd] text-[#68746d]"
+          }`}
+        >
+          {entry.entry_type === "directory" ? "DIR" : "FILE"}
+        </span>
+        <span className="min-w-0 truncate">{entry.name}</span>
+      </button>
+      {entry.children.length > 0 ? (
+        <div>
+          {entry.children.map((child) => (
+            <VaultTree
+              depth={depth + 1}
+              entry={child}
+              key={child.path}
+              onSelect={onSelect}
+              selectedPath={selectedPath}
+            />
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
 }
 
 function StateRow({ label, value }: { label: string; value: string }) {

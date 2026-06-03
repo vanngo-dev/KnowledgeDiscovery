@@ -69,3 +69,20 @@ Initial metadata keys:
 - `schema_version`
 
 Evidence storage, source ingestion, chunking, FTS search, claims, evidence links, AI workflows, and graph data remain deferred.
+
+## Phase 5 Vault Tree
+
+Phase 5 adds an in-memory, read-only view model for displaying the vault tree in the UI. It is not persisted in SQLite.
+
+```text
+VaultTreeEntry
+├── name
+├── path
+├── relative_path
+├── entry_type
+└── children
+```
+
+`entry_type` is either `directory` or `file`.
+
+The tree is generated from folder/file listing only. File contents are not read, and no database records are created.

@@ -2,7 +2,7 @@
 
 KnowledgeDiscovery is a Windows-first local desktop app built with Tauri, React, TypeScript, Vite, and Tailwind CSS.
 
-Current phase: **Phase 4 - SQLite app DB initialization**
+Current phase: **Phase 5 - Vault explorer and file tree**
 
 ## Phase 1 Scope
 
@@ -39,3 +39,11 @@ pnpm tauri dev
 - Add Phase 4 schema bookkeeping tables only.
 - Display the app DB path and creation state in the desktop shell.
 - Do not import sources, chunk files, search content, extract claims, link evidence, or run AI workflows yet.
+
+## Phase 5 Scope
+
+- Add a read-only vault explorer and file tree.
+- Display folders and files under `KnowledgeDiscoveryVault`.
+- Do not read file contents.
+- Do not import files into SQLite.
+- Do not chunk files, search content, create source records, extract claims, link evidence, or run AI workflows yet.

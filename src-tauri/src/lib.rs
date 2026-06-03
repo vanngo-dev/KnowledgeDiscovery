@@ -59,6 +59,15 @@ struct VaultCreationResult {
     files_created: usize,
 }
 
+#[derive(Serialize)]
+struct VaultTreeEntry {
+    name: String,
+    path: String,
+    relative_path: String,
+    entry_type: String,
+    children: Vec<VaultTreeEntry>,
+}
+
 #[tauri::command]
 fn create_vault(base_path: String) -> Result<VaultCreationResult, String> {
     let trimmed_path = base_path.trim();
@@ -119,6 +128,27 @@ fn create_vault(base_path: String) -> Result<VaultCreationResult, String> {
         directories_created,
         files_created,
     })
+}
+
+#[tauri::command]
+fn list_vault_tree(vault_path: String) -> Result<VaultTreeEntry, String> {
+    let trimmed_path = vault_path.trim();
+
+    if trimmed_path.is_empty() {
+        return Err("Create or select a vault before loading the file tree.".to_string());
+    }
+
+    let vault_path = PathBuf::from(trimmed_path);
+
+    if !vault_path.exists() {
+        return Err("The vault path does not exist.".to_string());
+    }
+
+    if !vault_path.is_dir() {
+        return Err("The vault path must be a folder.".to_string());
+    }
+
+    build_vault_tree_entry(&vault_path, &vault_path)
 }
 
 fn create_dir_if_missing(path: &Path) -> Result<bool, String> {
@@ -202,11 +232,67 @@ fn initialize_app_database(database_path: &Path) -> Result<(), String> {
     Ok(())
 }
 
+fn build_vault_tree_entry(path: &Path, root_path: &Path) -> Result<VaultTreeEntry, String> {
+    let metadata = fs::metadata(path)
+        .map_err(|error| format!("Failed to inspect {}: {error}", path.to_string_lossy()))?;
+    let entry_type = if metadata.is_dir() {
+        "directory"
+    } else {
+        "file"
+    };
+    let name = path
+        .file_name()
+        .map(|name| name.to_string_lossy().to_string())
+        .unwrap_or_else(|| path.to_string_lossy().to_string());
+    let relative_path = path
+        .strip_prefix(root_path)
+        .map(|path| path.to_string_lossy().to_string())
+        .unwrap_or_default();
+    let mut children = Vec::new();
+
+    if metadata.is_dir() {
+        let entries = fs::read_dir(path)
+            .map_err(|error| format!("Failed to read {}: {error}", path.to_string_lossy()))?;
+
+        for entry in entries {
+            let entry = entry.map_err(|error| {
+                format!(
+                    "Failed to read an entry in {}: {error}",
+                    path.to_string_lossy()
+                )
+            })?;
+
+            children.push(build_vault_tree_entry(&entry.path(), root_path)?);
+        }
+
+        children.sort_by(|left, right| {
+            let left_group = if left.entry_type == "directory" { 0 } else { 1 };
+            let right_group = if right.entry_type == "directory" {
+                0
+            } else {
+                1
+            };
+
+            left_group
+                .cmp(&right_group)
+                .then_with(|| left.name.to_lowercase().cmp(&right.name.to_lowercase()))
+        });
+    }
+
+    Ok(VaultTreeEntry {
+        name,
+        path: path.to_string_lossy().to_string(),
+        relative_path,
+        entry_type: entry_type.to_string(),
+        children,
+    })
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![create_vault])
+        .invoke_handler(tauri::generate_handler![create_vault, list_vault_tree])
         .run(tauri::generate_context!())
         .expect("error while running KnowledgeDiscovery");
 }
@@ -253,6 +339,41 @@ mod tests {
         fs::remove_file(&database_path).expect("remove test database");
     }
 
+    #[test]
+    fn builds_read_only_vault_file_tree() {
+        let vault_path = test_vault_path();
+        let metadata_path = vault_path.join("04_Metadata");
+        let inbox_path = vault_path.join("00_Inbox");
+
+        fs::create_dir_all(&metadata_path).expect("create metadata directory");
+        fs::create_dir_all(&inbox_path).expect("create inbox directory");
+        fs::write(metadata_path.join("domains.md"), "# Domains\n").expect("create metadata file");
+        fs::write(vault_path.join(APP_DATABASE_NAME), "").expect("create database file");
+
+        let tree = list_vault_tree(vault_path.to_string_lossy().to_string())
+            .expect("build vault file tree");
+
+        assert_eq!(tree.name, VAULT_NAME);
+        assert_eq!(tree.entry_type, "directory");
+        assert_eq!(tree.children[0].name, "00_Inbox");
+        assert_eq!(tree.children[1].name, "04_Metadata");
+        assert_eq!(
+            tree.children.last().expect("database file entry").name,
+            APP_DATABASE_NAME
+        );
+        assert_eq!(
+            tree.children[1].children[0].relative_path,
+            PathBuf::from("04_Metadata")
+                .join("domains.md")
+                .to_string_lossy()
+        );
+
+        fs::remove_dir_all(&vault_path).expect("remove test vault");
+        if let Some(parent) = vault_path.parent() {
+            let _ = fs::remove_dir(parent);
+        }
+    }
+
     fn test_database_path() -> PathBuf {
         let timestamp = SystemTime::now()
             .duration_since(UNIX_EPOCH)
@@ -264,5 +385,20 @@ mod tests {
             .unwrap_or_else(|| PathBuf::from("target").join("test-databases"));
 
         base_path.join(format!("knowledgediscovery-test-{timestamp}.sqlite"))
+    }
+
+    fn test_vault_path() -> PathBuf {
+        let timestamp = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("system clock before unix epoch")
+            .as_nanos();
+
+        let base_path = std::env::var_os("CARGO_TARGET_TMPDIR")
+            .map(PathBuf::from)
+            .unwrap_or_else(|| PathBuf::from("target").join("test-vaults"));
+
+        base_path
+            .join(format!("knowledgediscovery-tree-test-{timestamp}"))
+            .join(VAULT_NAME)
     }
 }
