@@ -56,3 +56,16 @@ Phase 5 adds a read-only vault explorer and file tree.
 - Returned data: entry name, absolute path, relative path, entry type, and child entries.
 
 The command reads directory entries and filesystem metadata only. It does not read file contents, import files into SQLite, create source records, chunk content, search content, extract claims, link evidence, run AI workflows, or create graph data.
+
+## Phase 6
+
+Phase 6 imports Markdown and text files into the Facts zone.
+
+- Rust command: `import_fact_file`.
+- Supported extensions: `.md` and `.txt`.
+- Markdown destination: `KnowledgeDiscoveryVault/01_Facts/markdown`.
+- Text destination: `KnowledgeDiscoveryVault/01_Facts/text`.
+- SQLite schema version: `2`.
+- SQLite tables added: `sources` and `chunks`.
+
+The import command copies the source file into the vault, reads UTF-8 text content, splits it into chunks, creates one `sources` row, and creates one `chunks` row per chunk. It does not add FTS search, semantic search, claim extraction, evidence linking, AI workflows, or graph data.

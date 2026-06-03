@@ -86,3 +86,39 @@ VaultTreeEntry
 `entry_type` is either `directory` or `file`.
 
 The tree is generated from folder/file listing only. File contents are not read, and no database records are created.
+
+## Phase 6 Sources And Chunks
+
+Phase 6 upgrades the app database to schema version `2` and adds imported source storage for `.md` and `.txt` files.
+
+```sql
+CREATE TABLE IF NOT EXISTS sources (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    original_path TEXT NOT NULL,
+    vault_path TEXT NOT NULL,
+    relative_path TEXT NOT NULL,
+    file_name TEXT NOT NULL,
+    extension TEXT NOT NULL,
+    byte_length INTEGER NOT NULL,
+    imported_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS chunks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    source_id INTEGER NOT NULL,
+    chunk_index INTEGER NOT NULL,
+    content TEXT NOT NULL,
+    char_start INTEGER NOT NULL,
+    char_end INTEGER NOT NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (source_id) REFERENCES sources(id) ON DELETE CASCADE,
+    UNIQUE (source_id, chunk_index)
+);
+```
+
+Imported files are copied into:
+
+- `.md`: `01_Facts/markdown`
+- `.txt`: `01_Facts/text`
+
+FTS search, semantic search, claims, evidence links, AI workflows, and graph data remain deferred.

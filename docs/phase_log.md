@@ -153,3 +153,36 @@ Verification:
 - `pnpm run build` passes.
 - `cargo test --manifest-path src-tauri\Cargo.toml` passes.
 - `pnpm tauri build --debug` passes and builds `src-tauri\target\debug\knowledge-discovery.exe`.
+
+## Phase 6 - Markdown And Text Fact Import
+
+Status: Implementation complete.
+
+Scope:
+
+- Added the Rust `import_fact_file` command.
+- Limited imports to `.md` and `.txt`.
+- Copied imported files into the Facts area:
+  - `.md` files go to `01_Facts/markdown`.
+  - `.txt` files go to `01_Facts/text`.
+- Added SQLite schema version `2`.
+- Added `sources` and `chunks` tables.
+- Read imported UTF-8 file content and split it into chunks.
+- Stored one `sources` row and one `chunks` row per chunk.
+- Displayed imported source name, vault-relative path, and chunk count in the UI.
+
+Explicitly deferred:
+
+- FTS search.
+- Semantic search.
+- Claim extraction.
+- Evidence linking.
+- Re-evaluation queue.
+- Graph visualization.
+- AI workflows.
+
+Verification:
+
+- `cargo test --manifest-path src-tauri\Cargo.toml` passes.
+- `pnpm run build` passes.
+- `pnpm tauri build --debug` passes and builds `src-tauri\target\debug\knowledge-discovery.exe`.

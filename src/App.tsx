@@ -21,6 +21,16 @@ type VaultTreeEntry = {
   children: VaultTreeEntry[];
 };
 
+type FactImportResult = {
+  source_id: number;
+  original_path: string;
+  vault_path: string;
+  relative_path: string;
+  file_name: string;
+  extension: string;
+  chunk_count: number;
+};
+
 const sidebarItems = [
   { label: "Vault", active: true },
   { label: "Evidence", active: false },
@@ -64,6 +74,12 @@ function App() {
     useState<VaultTreeStatus>("Not loaded");
   const [vaultTreeMessage, setVaultTreeMessage] = useState("");
   const [selectedTreePath, setSelectedTreePath] = useState("");
+  const [sourceFilePath, setSourceFilePath] = useState("");
+  const [isImporting, setIsImporting] = useState(false);
+  const [importMessage, setImportMessage] = useState("");
+  const [importedSources, setImportedSources] = useState<FactImportResult[]>(
+    [],
+  );
 
   async function createVault() {
     setErrorMessage("");
@@ -74,6 +90,8 @@ function App() {
     setVaultTreeStatus("Not loaded");
     setVaultTreeMessage("");
     setSelectedTreePath("");
+    setImportMessage("");
+    setImportedSources([]);
 
     try {
       const result = await invoke<VaultCreationResult>("create_vault", {
@@ -91,6 +109,34 @@ function App() {
       setErrorMessage(getErrorMessage(error));
     } finally {
       setIsCreating(false);
+    }
+  }
+
+  async function importFactFile() {
+    if (!vaultState) {
+      return;
+    }
+
+    setErrorMessage("");
+    setImportMessage("");
+    setIsImporting(true);
+
+    try {
+      const result = await invoke<FactImportResult>("import_fact_file", {
+        sourceFilePath,
+        vaultPath: vaultState.vault_path,
+      });
+
+      setImportedSources((currentSources) => [result, ...currentSources]);
+      setImportMessage(
+        `Imported ${result.file_name} into Facts with ${result.chunk_count} chunk${result.chunk_count === 1 ? "" : "s"}.`,
+      );
+      setSourceFilePath("");
+      await loadVaultTree(vaultState.vault_path);
+    } catch (error) {
+      setErrorMessage(getErrorMessage(error));
+    } finally {
+      setIsImporting(false);
     }
   }
 
@@ -139,6 +185,8 @@ function App() {
     vaultState !== null && databaseHealthStatus !== "Checking";
   const canRefreshVaultTree =
     vaultState !== null && vaultTreeStatus !== "Loading";
+  const canImportFactFile =
+    vaultState !== null && sourceFilePath.trim().length > 0 && !isImporting;
 
   return (
     <div className="flex h-screen min-h-[620px] flex-col overflow-hidden bg-[#eef1ed] text-[#1f2624]">
@@ -160,7 +208,7 @@ function App() {
         <div className="mx-auto hidden w-full max-w-xl items-center rounded border border-[#cbd3cd] bg-[#f5f7f3] px-3 py-1.5 text-sm text-[#68746d] md:flex">
           {vaultState?.vault_path ?? "No vault created"}
           <span className="ml-auto rounded border border-[#cbd3cd] bg-white px-1.5 py-0.5 text-[11px] text-[#7b867f]">
-            Phase 5
+            Phase 6
           </span>
         </div>
 
@@ -205,7 +253,7 @@ function App() {
               Phase
             </p>
             <p className="mt-2 text-sm font-medium text-[#26312e]">
-              Vault explorer
+              Fact import
             </p>
           </div>
         </aside>
@@ -217,7 +265,7 @@ function App() {
                 Center Workspace
               </p>
               <h2 className="mt-1 text-2xl font-semibold text-[#1c2723]">
-                Vault Explorer
+                Import Facts
               </h2>
             </div>
             <div className="rounded border border-[#cbd3cd] bg-white px-3 py-2 text-right">
@@ -273,6 +321,81 @@ function App() {
               <p className="rounded border border-[#d5ddd7] bg-[#f6f8f4] px-3 py-2 text-sm text-[#4d5a54]">
                 {statusMessage}
               </p>
+            </div>
+          </section>
+
+          <section className="mt-5 rounded border border-[#cbd3cd] bg-white">
+            <div className="border-b border-[#d5ddd7] px-4 py-3">
+              <h3 className="text-sm font-semibold text-[#26312e]">
+                Import Fact File
+              </h3>
+            </div>
+            <div className="space-y-4 p-4">
+              <div>
+                <label
+                  className="text-xs font-semibold uppercase tracking-wide text-[#748079]"
+                  htmlFor="source-file-path"
+                >
+                  .md or .txt source path
+                </label>
+                <div className="mt-2 flex gap-2">
+                  <input
+                    id="source-file-path"
+                    className="min-w-0 flex-1 rounded border border-[#cbd3cd] bg-[#fbfcf9] px-3 py-2 text-sm text-[#26312e] outline-none focus:border-[#1f4d46] disabled:cursor-not-allowed disabled:text-[#94aaa3]"
+                    disabled={!vaultState || isImporting}
+                    onChange={(event) => setSourceFilePath(event.target.value)}
+                    placeholder="Paste a .md or .txt file path"
+                    value={sourceFilePath}
+                  />
+                  <button
+                    className="shrink-0 rounded bg-[#1f4d46] px-3 py-2 text-sm font-semibold text-white hover:bg-[#183d38] disabled:cursor-not-allowed disabled:bg-[#94aaa3]"
+                    disabled={!canImportFactFile}
+                    onClick={importFactFile}
+                    type="button"
+                  >
+                    {isImporting ? "Importing" : "Import file"}
+                  </button>
+                </div>
+              </div>
+
+              {importMessage ? (
+                <p className="rounded border border-[#c5ddcb] bg-[#eefbf1] px-3 py-2 text-sm text-[#27633a]">
+                  {importMessage}
+                </p>
+              ) : null}
+
+              <div className="rounded border border-[#d5ddd7] bg-[#f6f8f4]">
+                <div className="border-b border-[#d5ddd7] px-3 py-2 text-xs font-semibold uppercase tracking-wide text-[#748079]">
+                  Imported sources
+                </div>
+                <div className="space-y-2 p-3">
+                  {importedSources.length > 0 ? (
+                    importedSources.map((source) => (
+                      <div
+                        className="rounded border border-[#d5ddd7] bg-white px-3 py-2"
+                        key={source.source_id}
+                      >
+                        <div className="flex min-w-0 items-center justify-between gap-3">
+                          <p className="min-w-0 truncate text-sm font-medium text-[#26312e]">
+                            {source.file_name}
+                          </p>
+                          <span className="shrink-0 rounded border border-[#cbd3cd] bg-[#fbfcf9] px-2 py-0.5 text-xs text-[#4d5a54]">
+                            {source.chunk_count} chunk
+                            {source.chunk_count === 1 ? "" : "s"}
+                          </span>
+                        </div>
+                        <p className="mt-1 break-words text-xs text-[#68746d]">
+                          {source.relative_path}
+                        </p>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-sm text-[#68746d]">
+                      No Phase 6 files imported yet.
+                    </p>
+                  )}
+                </div>
+              </div>
             </div>
           </section>
 
@@ -429,6 +552,18 @@ function App() {
             <StateRow label="DB health" value={databaseHealthStatus} />
             <StateRow label="Tree" value={vaultTreeStatus} />
             <StateRow
+              label="Sources"
+              value={String(importedSources.length)}
+            />
+            <StateRow
+              label="Latest chunks"
+              value={
+                importedSources[0]
+                  ? String(importedSources[0].chunk_count)
+                  : "0"
+              }
+            />
+            <StateRow
               label="Selected"
               value={selectedTreePath || "No tree item selected"}
             />
@@ -455,8 +590,8 @@ function App() {
       </div>
 
       <footer className="flex h-8 shrink-0 items-center justify-between border-t border-[#c2cbc4] bg-[#26312e] px-4 text-xs text-[#dce4dd]">
-        <span>Phase 5</span>
-        <span>Tauri + React + TypeScript + Vite + Tailwind CSS + Rust vault command + SQLite app DB + vault file tree</span>
+        <span>Phase 6</span>
+        <span>Tauri + React + TypeScript + Vite + Tailwind CSS + Rust vault command + SQLite app DB + source chunks</span>
         <span>com.knowledgediscovery.app</span>
       </footer>
     </div>

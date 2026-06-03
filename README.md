@@ -2,7 +2,7 @@
 
 KnowledgeDiscovery is a Windows-first local desktop app built with Tauri, React, TypeScript, Vite, and Tailwind CSS.
 
-Current phase: **Phase 5 - Vault explorer and file tree**
+Current phase: **Phase 6 - Markdown and text fact import**
 
 ## Phase 1 Scope
 
@@ -47,3 +47,12 @@ pnpm tauri dev
 - Do not read file contents.
 - Do not import files into SQLite.
 - Do not chunk files, search content, create source records, extract claims, link evidence, or run AI workflows yet.
+
+## Phase 6 Scope
+
+- Import `.md` and `.txt` files by manually entered file path.
+- Copy imported files into the Facts area under `01_Facts/markdown` or `01_Facts/text`.
+- Create `sources` records in SQLite.
+- Read imported file content and split it into chunks.
+- Store chunks in the `chunks` table.
+- Do not add FTS search, semantic search, claims, evidence links, or AI workflows yet.
